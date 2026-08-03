@@ -751,6 +751,32 @@ class SimulationParameters():
         self.showProgressBar = showProgressBar
 
 
+# Modified by Giacomo Battaglia
+def parse_path(path):
+    import re
+    return re.findall(r'[A-Za-z_]\w*|\[\d+\]', path)
+
+
+def setattr_nested(obj, path, value):
+    tokens = parse_path(path)
+
+    current = obj
+
+    for token in tokens[:-1]:
+        if token.startswith("["):
+            current = current[int(token[1:-1])]
+        else:
+            current = getattr(current, token)
+
+    last = tokens[-1]
+
+    value = eval(value)
+
+    if last.startswith("["):
+        current[int(last[1:-1])] = value
+    else:
+        setattr(current, last, value)
+
 
 class SimulationExecutor:
     """
@@ -844,12 +870,12 @@ class SimulationExecutor:
                 if simParams.verbose:
                     print("Configuring sim")
                 simParams.configureFunction(simInstance)
-
+            
             # apply the dispersions and the random seeds
             for variable, value in list(modifications.items()):
                 if simParams.verbose:
                     print(f"Setting attribute {variable} to {value} on simInstance")
-                setattr(simInstance, variable, value)
+                setattr_nested(simInstance, variable, value)
 
             # setup data logging
             if len(simParams.retentionPolicies) > 0:
